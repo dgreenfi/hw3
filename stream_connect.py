@@ -11,8 +11,9 @@ class StdOutListener(tweepy.StreamListener):
         # Twitter returns data in JSON format - we need to decode it first
         tweet = json.loads(data)
         tweet['time'] = time.time()
-        print json.dumps(tweet)
-        sys.stdout.flush()
+        if tweet['entities']['hashtags']:
+            print json.dumps(tweet)
+            sys.stdout.flush()
 
     def on_error(self, status):
         print status

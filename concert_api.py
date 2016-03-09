@@ -9,6 +9,8 @@ from flask import render_template
 app = flask.Flask(__name__)
 conn = redis.Redis(db=0)
 conn_rate = redis.Redis(db=1)
+conn_prob = redis.Redis(db=2)
+conn_ent = redis.Redis(db=3)
 
 def buildHistogram():
     keys = conn.keys()
@@ -42,6 +44,29 @@ def probability():
     #hashtag = request.args.get('hashtag')
     #d = conn.get(hashtag)
     return values[0]+keys[0]
+
+@app.route("/probability_hist")
+def probability_hist():
+    # return current probability distribution for hashtags
+    h = buildHistogram()
+    print h
+    return json.dumps({"prob_hist":h})
+
+@app.route("/probability_curve")
+def probability_curve():
+    # return curve of historical probability for a given term
+    pass
+    return json.dumps({"prob_hist":"placeholder"})
+
+@app.route("/entropy_history")
+def entropy_history():
+    # return array of historical entropites for a distribution
+    keys = conn_ent.keys()
+    #print keys
+    lasts=conn_ent.lrange(['entropy'],-1,-10)
+    values = conn_ent.mget(keys)
+    return json.dumps({'ent_history':str(lasts)})
+
 
 @app.route("/rate")
 def rate():
