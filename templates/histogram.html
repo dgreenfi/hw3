@@ -2,22 +2,63 @@
   <head>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
-      google.charts.load("current", {packages:["corechart"]});
+      google.charts.load("current", {packages:["corechart","table"]});
       google.charts.setOnLoadCallback(drawChart);
       function drawChart() {
         var data = google.visualization.arrayToDataTable({{ histogram_data|tojson }});
 
         var options = {
-          title: 'Lengths of dinosaurs, in meters',
+          title: 'Distribution of Hashtags',
           legend: { position: 'none' },
         };
 
         var chart = new google.visualization.Histogram(document.getElementById('chart_div'));
         chart.draw(data, options);
       }
+
+
     </script>
+    <script type="text/javascript">
+      google.charts.setOnLoadCallback(drawTable);
+
+      function drawTable() {
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Alert Type');
+        data.addColumn('string', 'Alert Text');
+        data.addColumn('string', 'Alert Time');
+        data.addRows({{table_data|tojson}});
+
+        var table = new google.visualization.Table(document.getElementById('table_div'));
+
+        table.draw(data, {showRowNumber: true, width: '60%', height: '20%'});
+      }
+    </script>
+
+      <script type="text/javascript">
+      google.charts.setOnLoadCallback(drawTable);
+
+      function drawTable() {
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', 'Hashtag');
+        data.addColumn('number', 'Count in Last 10 Min');
+        data.addColumn('number', 'Percentage of Hashtag Count');
+        data.addRows({{hashtag_data|tojson}});
+
+        var table = new google.visualization.Table(document.getElementById('table_div2'));
+
+        table.draw(data, {showRowNumber: true, width: '60%', height: '20%'});
+      }
+    </script>
+
+
   </head>
+
+  <h1> Concert #Hashtag Event Dashboard</h1>
   <body>
+
+
     <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <div id="table_div" style="align:center;"></div>
+    <div id="table_div2" style="align:center;"></div>
   </body>
 </html>
