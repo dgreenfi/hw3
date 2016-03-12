@@ -1,11 +1,14 @@
 # Entropy Exercise
 ## System Overview
-## Purpose of System
+## Description of System
 
 My system reports changes in hashtags in conversation in Tweets with people mentioning concerts.  This could be useful
 in identify both live concert events and locations as well as concert ticket announcements.
 
-## Event Triggers
+The system creates two types of alerts: alerts for new hashtags in the top 5 and alerts when the entropy of the system
+reaches new maximum within the retention window.
+
+The alerts, probability and a histogram of hashtag freqency are all displayed on a primary dashboard as illustrated below.
 
 
 ## Dashboard
@@ -28,24 +31,23 @@ for rate calculations and hashtag messages contain hashtags and times for probab
     *Checking for entropy and probability change events
 
 
-
-
-## Starting the System
+## Usage: Starting the System
 ###run to start redis
 redis-server
 
 ### run this to insert data into redis
 python stream_connect.py | python entities.py | python store_redis.py
 
+###run this to start api server
+
+python concert_api.py
+
 ### run this to start event detection poller
 
 python event_poller.py
 
 
-###run this to start api server
 
-python concert_api.py
-
-###go here to see current distribution
+###go here to see current dashboard
 
 http://127.0.0.1:5000/ 

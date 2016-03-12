@@ -33,18 +33,16 @@
         table.draw(data, {showRowNumber: true, width: '60%', height: '20%'});
       }
     </script>
-
-      <script type="text/javascript">
+        <script type="text/javascript">
       google.charts.setOnLoadCallback(drawTable);
 
       function drawTable() {
         var data = new google.visualization.DataTable();
         data.addColumn('string', 'Hashtag');
-        data.addColumn('number', 'Count in Last 10 Min');
-        data.addColumn('number', 'Percentage of Hashtag Count');
-        data.addRows({{hashtag_data|tojson}});
+        data.addColumn('number', 'Probability');
+        data.addRows({{hashtag|tojson}});
 
-        var table = new google.visualization.Table(document.getElementById('table_div2'));
+        var table = new google.visualization.Table(document.getElementById('table_hash'));
 
         table.draw(data, {showRowNumber: true, width: '60%', height: '20%'});
       }
@@ -56,9 +54,8 @@
   <h1> Concert #Hashtag Event Dashboard</h1>
   <body>
 
-
     <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <div id="table_hash" style="align:center;"></div>
     <div id="table_div" style="align:center;"></div>
-    <div id="table_div2" style="align:center;"></div>
   </body>
 </html>

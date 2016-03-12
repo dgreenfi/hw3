@@ -13,8 +13,10 @@ conn_prob = redis.Redis(db=2)
 conn_ent = redis.Redis(db=3)
 conn_prob_alert = redis.Redis(db=4)
 conn_ent_alert = redis.Redis(db=5)
+conn_hash = redis.Redis(db=6)
 
 def buildHistogram():
+    #unexposed function to gather hashtag histogram
     keys = conn.keys()
     if len(keys)>0:
         values = conn.mget(keys)
@@ -22,11 +24,11 @@ def buildHistogram():
         z = sum(c.values())
         hist= {k:v/float(z) for k,v in c.items()}
         return hist
-
     else:
         return []
 
 def prob_alerts():
+    #unexposed function to support probability alert
     keys = conn_prob_alert.keys()
     if len(keys)>0:
         values = conn_prob_alert.mget(keys)
@@ -36,32 +38,72 @@ def prob_alerts():
         return []
 
 def ent_alerts():
+    #unexposed function to support entropy alerts
     keys = conn_ent_alert.keys()
-    values = conn_ent_alert.mget(keys)
-    tuples=zip(keys, values)
-    return tuples
+    if len(keys)>0:
+        values = conn_ent_alert.mget(keys)
+        tuples=zip(keys, values)
+        return tuples
+    else:
+        return []
 
 
 @app.route("/")
 def histogram():
+    #primary portal and base routh
     h = buildHistogram()
     headers=['Hashtag','Frequecy']
     histogram_list=[[k,h[k]] for k in h]
     histogram_list=[headers]+histogram_list
+    #gather data for tables
     ps=prob_alerts()
     es=ent_alerts()
-    print ps
+    #probabilities for table
+    hashtags=[[str(k),h[k]] for k in h.keys()]
+    hash_new=[]
+    #let's drop unicode for now due to html errors
+    for h in hashtags:
+        print type(h[0])
+        try:
+            test=h[0].decode('utf-8')
+            hash_new.append(h)
+        except UnicodeDecodeError:
+            pass
+
+    hashtags=hash_new
+
+    hashtags=sorted(hashtags, key=lambda x: x[1],reverse=True)
+
+    print hashtags
+
     es_list=[["Entropy Warning",v,str(k)] for (k,v) in es[0:10]]
     table_list=[["Trending Hashtag",v,str(k)] for (k,v) in ps[0:10]]
     table_list=table_list+es_list
-    #table_list=[['New Hashtag','Test Tag','10:30'],['Trending Hashtag','#Trending','10:29']]
-    hashtag_list=[['#Coolshow',23,{'v':18.5,'f':'18.5%'}],['#Badshow',54,{'v':11.5,'f':'9.5%'}]]
-    return render_template('histogram.html',histogram_data=histogram_list,table_data=table_list,hashtag_data=hashtag_list)
+    table_list=sorted(table_list, key=lambda x: x[2],reverse=True)
+    # return the dashboard with data table data
+    return render_template('histogram.html',\
+                           histogram_data=histogram_list,\
+                           table_data=table_list,\
+                           hashtag=hashtags)
 
 @app.route("/histo")
 def show_histogram():
     h = buildHistogram()
     return json.dumps(h)
+
+@app.route("/trending")
+def show_trending():
+    keys= conn_hash.keys()
+    values = conn_hash.mget(keys)
+    return json.dumps(zip(keys,values))
+
+@app.route("/alerts")
+def show_alerts():
+
+    es=ent_alerts()
+    ps=prob_alerts()
+    print es,ps
+    return json.dumps(es)
 
 @app.route("/entropy")
 def entropy():
@@ -84,7 +126,7 @@ def probability_hist():
     # return current probability distribution for hashtags
     h = buildHistogram()
     print h
-    return json.dumps({"prob_hist":h})
+    return json.dumps(h)
 
 @app.route("/probability_curve")
 def probability_curve():
@@ -107,6 +149,16 @@ def entropy_history():
     values = conn_ent.mget(keys)
     return json.dumps(sorted(zip(keys,values), key=lambda x: x[0]))
 
+@app.route("/flush_all")
+def flush():
+    conn.flushdb()
+    conn_rate.flushdb()
+    conn_prob.flushdb()
+    conn_ent.flushdb()
+    conn_prob_alert.flushdb()
+    conn_ent_alert.flushdb()
+    conn_hash.flushdb()
+    return json.dumps({"Cleared":"All"})
 
 @app.route("/rate")
 def rate():

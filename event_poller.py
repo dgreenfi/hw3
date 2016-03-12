@@ -12,6 +12,7 @@ conn_prob = redis.Redis(db=2)
 conn_ent = redis.Redis(db=3)
 conn_prob_alert = redis.Redis(db=4)
 conn_ent_alert = redis.Redis(db=5)
+conn_hash = redis.Redis(db=6)
 api_server='http://127.0.0.1:5000/'
 
 def main():
@@ -27,44 +28,62 @@ def main():
         pjson=prob.json()
         #needed to flush a couple times to get list format right
         #conn_prob.flushdb()
-        for p in pjson['prob_hist']:
-            print p, pjson['prob_hist'][p]
-            conn_prob.lpush(p, pjson['prob_hist'][p])
+        for p in pjson:
+            print p, pjson[p]
+            conn_prob.lpush(p, pjson[p])
         time.sleep(2)
 
-        prob=requests.get(api_server+'probability_curve')
+        prob=requests.get(api_server+'probability_hist')
         ent=requests.get(api_server+'entropy_history')
         create_alerts_prob(prob.json())
         create_alerts_ent(ent.json())
 
+
 def create_alerts_prob(prob):
+    ###identify new top hashtag
+    values=[]
+    #create array of (hashtag,probability) tuples
+    hashtags=[(k,prob[k]) for k in prob.keys()]
+    hashtags=sorted(hashtags, key=lambda x: x[1],reverse=True)
+    just_tags=[h[0] for h in hashtags[0:5]]
 
-    for k in prob:
-        #last minute of probabilitie
-        trend=[(100*float(x)) for x in prob[k][0:30]]
-        print trend
-        y=range(0,len(trend))
-        y.reverse()
-        if len(trend)>10:
-            #note used yet
-            slope, intercept, r_value, p_value, std_err = stats.linregress(trend,y)
-            #set threshold
-            if trend[0]>.1:
-                    t = str(time.time())
-                    alertstring=k+ " seems to be trending with a probability of " + str(trend[0])
-                    conn_prob_alert.set(t,alertstring)
+    #get prior top 5
+    keys = conn_hash.keys()
+    if len(keys)>1:
+        values = conn_hash.mget(keys)
 
-            #system is setup to do more complex regression of trends but still need to add in
-        else:
-            pass
+    if len(values)<5:
+        #if top hashtags not set, set them
+        for i,hash in enumerate(hashtags[0:5]):
+            conn_hash.setex(i,hash[0],120)
+
+    else:
+        #compare to previous top 5 and reset
+        new=[]
+        for h in just_tags:
+            if h not in values:
+                #if hashtag is new, create and create an alert
+                alertstring="New trending hashtag " + h + " has " + str(hashtags[just_tags.index(h)][1]) + " probability."
+                t = str(time.time())
+                print h,values,alertstring
+                conn_prob_alert.set(t,alertstring)
+        hashtags_new=zip(keys,values)
+        hashtags_new=sorted(hashtags, key=lambda x: x[1],reverse=True)
+        for i,hash in enumerate(hashtags_new[0:5]):
+            #set new top 5
+            conn_hash.setex(i,hash[0],120)
+
+
+
 
 
 def create_alerts_ent(ent):
+    #create alerts when system entropy changes
     t = str(time.time())
-    if ent[0]== max(ent[0:20]):
-
-        alertstring="Entropy is through the roof. It's at the max value in the last " + str(len(ent[0:20])) + " checks."
-        conn_ent_alert.set(t,alertstring)
+    entvals=[e[1] for e in ent]
+    if entvals[0]>= max(entvals[1:10]):
+        alertstring="Entropy is through the roof. It's at the max value in the last " + str(len(ent[0:10])) + " checks."
+        conn_ent_alert.setex(t,alertstring,120)
     pass
 
 
