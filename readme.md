@@ -14,6 +14,8 @@ The alerts, probability and a histogram of hashtag freqency are all displayed on
 ## Dashboard
 Below is an image showing the probability distribution, alerts and the top items in the probability distribution.
 
+![Dashbard](appshot.png)
+
 
 ## Data Flow
 
